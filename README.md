@@ -168,7 +168,7 @@ Response:
 
 Built as a Database Management Systems project at **Thapar Institute of Engineering and Technology, Patiala** (UCS310, Jan–May 2026).
 
-**Authors:** Barleen Kaur · Ayush Vaibhav · Kunjal Syal
+**Authors:**  Kunjal Syal . Barleen Kaur · Ayush Vaibhav 
 
 ---
 
