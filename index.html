@@ -1,0 +1,908 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Pandapay — Digital Wallet</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,500;0,9..144,600;1,9..144,300&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --peach-50:  #FFF5F0;
+    --peach-100: #FFE5D6;
+    --peach-200: #FFC9AB;
+    --peach-300: #FFB08A;
+    --peach-400: #FF9466;
+    --peach-500: #F07040;
+    --peach-600: #D4522A;
+    --sand-100:  #F5EDE0;
+    --sand-200:  #E8D5BC;
+    --warm-50:   #FEFAF6;
+    --warm-100:  #F9EDE0;
+    --rose-100:  #FFE4E8;
+    --rose-500:  #D4607A;
+    --amber-100: #FEF3C7;
+    --amber-500: #D97706;
+    --green-100: #D1FAE5;
+    --green-500: #059669;
+    --text-dark: #2D1F0F;
+    --text-mid:  #7A5A3A;
+    --text-light:#B08060;
+    --ink:       #1A100A;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--warm-50);
+    color: var(--text-dark);
+    min-height: 100vh;
+  }
+
+  /* sidebar */
+  .sidebar {
+    position: fixed; left: 0; top: 0; bottom: 0; width: 260px;
+    background: var(--peach-50);
+    border-right: 1px solid var(--peach-100);
+    display: flex; flex-direction: column;
+    padding: 32px 0 24px; z-index: 10;
+  }
+
+  .logo { padding: 0 28px 32px; border-bottom: 1px solid var(--peach-100); }
+  .logo-mark { font-family: 'Fraunces', serif; font-size: 26px; font-weight: 600; color: var(--peach-600); }
+  .logo-sub { font-size: 11px; color: var(--text-light); letter-spacing: 2px; text-transform: uppercase; margin-top: 2px; }
+
+  .nav { flex: 1; padding: 24px 16px; display: flex; flex-direction: column; gap: 4px; }
+  .nav-section { font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: var(--text-light); padding: 16px 16px 8px; font-weight: 500; }
+
+  .nav-item {
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px 16px; border-radius: 12px; cursor: pointer;
+    font-size: 14px; color: var(--text-mid);
+    transition: all 0.15s; border: 1px solid transparent;
+  }
+  .nav-item:hover { background: var(--peach-100); color: var(--peach-600); }
+  .nav-item.active { background: var(--peach-400); color: #fff; font-weight: 500; box-shadow: 0 4px 12px rgba(240,112,64,0.3); }
+
+  .db-pill {
+    margin: 0 16px 16px;
+    padding: 7px 12px;
+    border-radius: 10px;
+    font-size: 11px;
+    display: flex; align-items: center; gap: 7px;
+    background: var(--green-100); color: var(--green-500);
+  }
+  .db-pill.offline { background: var(--rose-100); color: var(--rose-500); }
+  .db-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green-500); flex-shrink: 0; }
+  .db-pill.offline .db-dot { background: var(--rose-500); }
+
+  .user-card {
+    margin: 0 16px;
+    padding: 14px 16px;
+    background: var(--peach-100); border-radius: 16px;
+    display: flex; align-items: center; gap: 12px;
+  }
+  .avatar {
+    width: 36px; height: 36px; border-radius: 50%;
+    background: var(--peach-400);
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Fraunces', serif; font-size: 14px; color: #fff; font-weight: 600;
+  }
+  .user-name { font-size: 13px; font-weight: 500; }
+  .user-role { font-size: 11px; color: var(--text-mid); margin-top: 1px; }
+
+  /* main */
+  .main { margin-left: 260px; padding: 40px 48px; }
+
+  .page { display: none; }
+  .page.active { display: block; }
+
+  .page-header {
+    display: flex; align-items: flex-start; justify-content: space-between;
+    margin-bottom: 36px;
+  }
+  .greeting { font-family: 'Fraunces', serif; font-size: 36px; font-weight: 300; color: var(--ink); line-height: 1.15; }
+  .greeting em { color: var(--peach-500); font-style: italic; }
+  .subhead { font-size: 13px; color: var(--text-mid); margin-top: 6px; }
+
+  .btn {
+    background: var(--peach-500); color: #fff; border: none;
+    padding: 12px 24px; border-radius: 40px; font-size: 14px; font-weight: 500;
+    cursor: pointer; font-family: 'DM Sans', sans-serif;
+    display: flex; align-items: center; gap: 8px;
+    transition: all 0.15s; box-shadow: 0 4px 16px rgba(240,112,64,0.3);
+  }
+  .btn:hover { background: var(--peach-600); transform: translateY(-1px); }
+  .btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+
+  /* hero */
+  .hero { display: grid; grid-template-columns: 1.4fr 1fr; gap: 24px; margin-bottom: 32px; }
+
+  .balance-card {
+    background: linear-gradient(135deg, #F07040, #D4522A 55%, #B83A1A);
+    border-radius: 28px; padding: 36px; color: #fff;
+    position: relative; overflow: hidden; min-height: 220px;
+  }
+  .balance-card::before {
+    content: ''; position: absolute;
+    right: -40px; top: -60px; width: 240px; height: 240px;
+    background: rgba(255,255,255,0.07); border-radius: 50%;
+  }
+  .balance-label { font-size: 12px; letter-spacing: 2px; text-transform: uppercase; opacity: 0.7; margin-bottom: 12px; }
+  .balance-amount { font-family: 'Fraunces', serif; font-size: 52px; font-weight: 300; line-height: 1; letter-spacing: -2px; margin-bottom: 4px; }
+  .balance-sub { font-size: 13px; opacity: 0.65; margin-bottom: 28px; }
+  .status-chip {
+    display: inline-flex; align-items: center; gap: 7px;
+    background: rgba(255,255,255,0.14); border: 1px solid rgba(255,255,255,0.2);
+    padding: 6px 14px; border-radius: 40px; font-size: 12px; font-weight: 500;
+  }
+  .status-dot { width: 6px; height: 6px; border-radius: 50%; background: #4ade80; box-shadow: 0 0 6px #4ade80; }
+
+  .stat-stack { display: flex; flex-direction: column; gap: 16px; }
+  .stat-card {
+    background: #fff; border-radius: 20px; padding: 20px 24px;
+    border: 1px solid var(--peach-100);
+    display: flex; align-items: center; gap: 16px;
+    transition: transform 0.15s, box-shadow 0.15s;
+  }
+  .stat-card:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(240,112,64,0.1); }
+  .stat-icon { width: 44px; height: 44px; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; }
+  .stat-icon.g { background: var(--green-100); }
+  .stat-icon.p { background: var(--peach-100); }
+  .stat-icon.r { background: var(--rose-100); }
+  .stat-label { font-size: 12px; color: var(--text-mid); }
+  .stat-value { font-size: 20px; font-weight: 600; font-family: 'Fraunces', serif; }
+  .stat-sub   { font-size: 11px; color: var(--text-light); margin-top: 2px; }
+
+  /* limits */
+  .card { background: #fff; border-radius: 24px; padding: 28px; border: 1px solid var(--peach-100); margin-bottom: 32px; }
+  .card-title { font-family: 'Fraunces', serif; font-size: 20px; font-weight: 500; margin-bottom: 4px; }
+  .card-sub { font-size: 13px; color: var(--text-light); margin-bottom: 24px; }
+
+  .limit-row { margin-bottom: 18px; }
+  .limit-row:last-child { margin-bottom: 0; }
+  .limit-header { display: flex; justify-content: space-between; margin-bottom: 8px; }
+  .limit-name { font-size: 14px; color: var(--text-mid); }
+  .limit-right { text-align: right; }
+  .limit-vals { font-size: 13px; font-weight: 500; }
+  .limit-pct  { font-size: 11px; color: var(--text-light); margin-top: 2px; }
+  .bar-track  { height: 8px; background: var(--sand-100); border-radius: 40px; overflow: hidden; }
+  .bar-fill   { height: 100%; border-radius: 40px; transition: width 0.8s cubic-bezier(0.25,1,0.5,1); }
+  .bar-peach  { background: linear-gradient(90deg, var(--peach-300), var(--peach-500)); }
+  .bar-rose   { background: linear-gradient(90deg, #F4A0AE, var(--rose-500)); }
+  .bar-amber  { background: linear-gradient(90deg, #FCD34D, var(--amber-500)); }
+
+  /* transactions table */
+  .table-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
+  .chips { display: flex; gap: 8px; }
+  .chip {
+    padding: 6px 16px; border-radius: 40px; font-size: 12px;
+    cursor: pointer; font-family: 'DM Sans', sans-serif;
+    border: 1px solid var(--peach-200); background: transparent;
+    color: var(--text-mid); transition: all 0.12s;
+  }
+  .chip.active { background: var(--peach-400); color: #fff; border-color: var(--peach-400); }
+  .chip:hover:not(.active) { background: var(--peach-50); }
+
+  table { width: 100%; border-collapse: collapse; }
+  th {
+    font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase;
+    color: var(--text-light); font-weight: 500;
+    padding: 0 0 14px; text-align: left;
+    border-bottom: 1px solid var(--sand-100);
+  }
+  .trow { border-bottom: 1px solid var(--sand-100); transition: background 0.1s; cursor: pointer; }
+  .trow:hover { background: var(--warm-100); }
+  .trow:last-child { border-bottom: none; }
+  .trow td { padding: 13px 0; vertical-align: middle; }
+
+  .txn-icon { width: 38px; height: 38px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 16px; margin-right: 12px; }
+  .txn-icon.credit   { background: var(--green-100); }
+  .txn-icon.debit    { background: var(--rose-100); }
+  .txn-icon.refund   { background: var(--amber-100); }
+  .txn-icon.transfer { background: var(--peach-100); }
+
+  .txn-name { font-size: 14px; font-weight: 500; }
+  .txn-meta { font-size: 11px; color: var(--text-light); margin-top: 2px; }
+  .txn-amt  { font-size: 15px; font-weight: 600; font-family: 'Fraunces', serif; }
+  .txn-amt.pos { color: var(--green-500); }
+  .txn-amt.neg { color: var(--rose-500); }
+
+  .badge { display: inline-flex; align-items: center; padding: 3px 10px; border-radius: 40px; font-size: 11px; font-weight: 500; }
+  .badge-success  { background: var(--green-100); color: var(--green-500); }
+  .badge-failed   { background: var(--rose-100);  color: var(--rose-500); }
+  .badge-pending  { background: var(--amber-100); color: var(--amber-500); }
+  .badge-reversed { background: var(--peach-100); color: var(--peach-600); }
+
+  .empty { text-align: center; padding: 40px; font-size: 14px; color: var(--text-light); }
+
+  /* refund cards */
+  .refund-card {
+    background: #fff; border-radius: 20px; padding: 20px 24px;
+    border: 1px solid var(--peach-100); margin-bottom: 14px;
+    display: flex; justify-content: space-between; align-items: flex-start; gap: 16px;
+  }
+  .refund-actions { display: flex; flex-direction: column; gap: 6px; align-items: flex-end; flex-shrink: 0; }
+  .btn-sm { padding: 7px 16px; border-radius: 40px; font-size: 12px; font-weight: 500; cursor: pointer; font-family: 'DM Sans', sans-serif; border: none; transition: all 0.12s; }
+  .btn-ok  { background: var(--green-100); color: var(--green-500); }
+  .btn-no  { background: var(--rose-100);  color: var(--rose-500); }
+  .btn-ok:hover  { background: var(--green-500); color: #fff; }
+  .btn-no:hover  { background: var(--rose-500);  color: #fff; }
+
+  /* wallet cards */
+  .wallet-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 32px; }
+  .wallet-card { background: #fff; border-radius: 24px; padding: 24px; border: 1px solid var(--peach-100); }
+
+  /* audit */
+  .audit-row { display: flex; gap: 14px; align-items: flex-start; padding: 12px 0; border-bottom: 1px solid var(--sand-100); }
+  .audit-row:last-child { border-bottom: none; }
+  .audit-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; margin-top: 5px; }
+  .audit-action { font-size: 13px; font-weight: 500; }
+  .audit-detail { font-size: 12px; color: var(--text-mid); margin-top: 2px; }
+  .audit-time   { font-size: 11px; color: var(--text-light); margin-top: 3px; }
+  .immutable-tag { font-size: 11px; color: var(--text-light); padding: 2px 8px; background: var(--sand-100); border-radius: 40px; white-space: nowrap; }
+
+  /* modal */
+  .overlay { display: none; position: fixed; inset: 0; background: rgba(45,31,15,0.35); backdrop-filter: blur(6px); z-index: 100; align-items: center; justify-content: center; }
+  .overlay.open { display: flex; }
+  .modal { background: var(--warm-50); border-radius: 28px; padding: 40px; width: 440px; max-width: 90vw; border: 1px solid var(--peach-100); animation: up 0.22s ease; max-height: 90vh; overflow-y: auto; }
+  @keyframes up { from { opacity:0; transform:translateY(18px); } to { opacity:1; transform:translateY(0); } }
+  .modal-title { font-family: 'Fraunces', serif; font-size: 26px; font-weight: 500; margin-bottom: 4px; }
+  .modal-sub { font-size: 13px; color: var(--text-mid); margin-bottom: 28px; }
+
+  .form-group { margin-bottom: 18px; }
+  .form-label { font-size: 12px; letter-spacing: 1px; text-transform: uppercase; color: var(--text-mid); font-weight: 500; display: block; margin-bottom: 8px; }
+  .form-input { width: 100%; padding: 12px 16px; border: 1.5px solid var(--peach-200); border-radius: 14px; font-family: 'DM Sans', sans-serif; font-size: 15px; color: var(--text-dark); background: #fff; outline: none; transition: border-color 0.12s; }
+  .form-input:focus { border-color: var(--peach-400); }
+  .inr-wrap { position: relative; }
+  .inr-prefix { position: absolute; left: 16px; top: 50%; transform: translateY(-50%); font-size: 16px; color: var(--text-mid); font-family: 'Fraunces', serif; font-weight: 500; }
+  .inr-wrap .form-input { padding-left: 34px; }
+
+  .type-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 8px; }
+  .type-btn { padding: 10px 4px; border: 1.5px solid var(--peach-200); border-radius: 12px; text-align: center; cursor: pointer; font-size: 11px; color: var(--text-mid); background: #fff; transition: all 0.12s; font-family: 'DM Sans', sans-serif; }
+  .type-btn .icon { font-size: 18px; display: block; margin-bottom: 4px; }
+  .type-btn.sel { background: var(--peach-100); border-color: var(--peach-400); color: var(--peach-600); font-weight: 500; }
+  .type-btn:hover:not(.sel) { background: var(--peach-50); }
+
+  .modal-footer { display: flex; gap: 12px; margin-top: 28px; }
+  .btn-ghost { flex: 1; padding: 13px; border: 1.5px solid var(--peach-200); border-radius: 40px; background: transparent; color: var(--text-mid); font-family: 'DM Sans', sans-serif; font-size: 14px; cursor: pointer; }
+  .btn-ghost:hover { background: var(--peach-50); }
+  .btn-submit { flex: 2; padding: 13px; border: none; border-radius: 40px; background: var(--peach-500); color: #fff; font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 500; cursor: pointer; transition: all 0.15s; box-shadow: 0 4px 14px rgba(240,112,64,0.3); }
+  .btn-submit:hover { background: var(--peach-600); }
+  .btn-submit:disabled { opacity: 0.6; cursor: not-allowed; }
+
+  /* toast */
+  .toast { position: fixed; bottom: 32px; right: 32px; background: var(--ink); color: #fff; padding: 14px 22px; border-radius: 14px; font-size: 14px; display: flex; align-items: center; gap: 10px; transform: translateY(80px); opacity: 0; transition: all 0.25s cubic-bezier(0.25,1,0.5,1); z-index: 200; max-width: 380px; }
+  .toast.show { transform: translateY(0); opacity: 1; }
+  .toast.ok  { border-left: 4px solid var(--green-500); }
+  .toast.err { border-left: 4px solid var(--rose-500); }
+
+  @keyframes fadeUp { from { opacity:0; transform:translateY(14px); } to { opacity:1; transform:translateY(0); } }
+  .fade-up { animation: fadeUp 0.4s ease forwards; }
+
+  ::-webkit-scrollbar { width: 5px; }
+  ::-webkit-scrollbar-thumb { background: var(--peach-200); border-radius: 40px; }
+</style>
+</head>
+<body>
+
+<aside class="sidebar">
+  <div class="logo">
+    <div class="logo-mark">🐼 Pandapay</div>
+    <div class="logo-sub">Digital Wallet</div>
+  </div>
+
+  <nav class="nav">
+    <span class="nav-section">Main</span>
+    <div class="nav-item active" onclick="nav('dashboard', this)">◈ &nbsp; Dashboard</div>
+    <div class="nav-item" onclick="nav('transactions', this)">⇆ &nbsp; Transactions</div>
+    <div class="nav-item" onclick="nav('refunds', this)">↩ &nbsp; Refunds</div>
+    <span class="nav-section" style="margin-top:8px">Admin</span>
+    <div class="nav-item" onclick="nav('wallets', this)">◻ &nbsp; Wallets</div>
+    <div class="nav-item" onclick="nav('audit', this)">◎ &nbsp; Audit Logs</div>
+  </nav>
+
+  <div class="db-pill" id="db-pill">
+    <div class="db-dot"></div>
+    <span id="db-text">Connecting…</span>
+  </div>
+
+  <div class="user-card">
+    <div class="avatar">KS</div>
+    <div>
+      <div class="user-name" id="sidebar-name">Kunjal Syal</div>
+      <div class="user-role">Account Holder</div>
+    </div>
+  </div>
+</aside>
+
+<main class="main">
+
+  <!-- Dashboard -->
+  <div class="page active" id="page-dashboard">
+    <div class="page-header fade-up">
+      <div>
+        <div class="greeting">Good morning, <em id="greet">Kunjal</em></div>
+        <div class="subhead">Tuesday, 29 April 2026 &nbsp;·&nbsp; Session Jan–May 2026</div>
+      </div>
+      <button class="btn" onclick="openModal()">+ New Transaction</button>
+    </div>
+
+    <div class="hero fade-up">
+      <div class="balance-card">
+        <div class="balance-label">Wallet Balance</div>
+        <div class="balance-amount" id="balance-display">₹ —</div>
+        <div class="balance-sub" id="balance-sub">Loading…</div>
+        <div class="status-chip" id="status-chip"><span class="status-dot"></span> Active</div>
+      </div>
+      <div class="stat-stack">
+        <div class="stat-card">
+          <div class="stat-icon g">💸</div>
+          <div>
+            <div class="stat-label">Spent Today</div>
+            <div class="stat-value" id="stat-daily">₹ —</div>
+            <div class="stat-sub" id="stat-daily-sub">—</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon p">📈</div>
+          <div>
+            <div class="stat-label">Monthly Spend</div>
+            <div class="stat-value" id="stat-monthly">₹ —</div>
+            <div class="stat-sub" id="stat-monthly-sub">—</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon r">🔁</div>
+          <div>
+            <div class="stat-label">Pending Refunds</div>
+            <div class="stat-value" id="stat-refunds">—</div>
+            <div class="stat-sub">Awaiting admin approval</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card fade-up">
+      <div class="card-title">Spending Limits</div>
+      <div class="card-sub">Live from Oracle · wallet_ops.daily_spent / monthly_spent</div>
+      <div id="limits-body">
+        <div style="color:var(--text-light);font-size:13px">Loading limits…</div>
+      </div>
+    </div>
+
+    <div class="card fade-up">
+      <div class="card-title">Recent Activity</div>
+      <div class="card-sub">Last 5 transactions from TRANSACTION_HISTORY</div>
+      <table>
+        <thead><tr><th>Transaction</th><th>Date</th><th>Amount</th><th>Status</th></tr></thead>
+        <tbody id="dash-txns"><tr><td colspan="4" class="empty">Loading…</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Transactions -->
+  <div class="page" id="page-transactions">
+    <div class="page-header fade-up">
+      <div>
+        <div class="greeting">All <em>Transactions</em></div>
+        <div class="subhead">Full history · TRANSACTION_HISTORY view</div>
+      </div>
+      <button class="btn" onclick="openModal()">+ New Transaction</button>
+    </div>
+    <div class="card fade-up">
+      <div class="table-header">
+        <div class="chips" id="txn-chips">
+          <button class="chip active" onclick="filterTxn('all', this)">All</button>
+          <button class="chip" onclick="filterTxn('CREDIT',   this)">Credit</button>
+          <button class="chip" onclick="filterTxn('DEBIT',    this)">Debit</button>
+          <button class="chip" onclick="filterTxn('REFUND',   this)">Refund</button>
+          <button class="chip" onclick="filterTxn('TRANSFER', this)">Transfer</button>
+        </div>
+        <button class="btn" style="font-size:12px;padding:8px 16px" onclick="loadTransactions()">↻ Refresh</button>
+      </div>
+      <table>
+        <thead><tr><th>Transaction</th><th>Reference</th><th>Date</th><th>Amount</th><th>Status</th></tr></thead>
+        <tbody id="all-txns"><tr><td colspan="5" class="empty">Loading…</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Refunds -->
+  <div class="page" id="page-refunds">
+    <div class="page-header fade-up">
+      <div>
+        <div class="greeting"><em>Refund</em> Requests</div>
+        <div class="subhead">REFUND_REQUEST table · wallet_ops.handle_refund</div>
+      </div>
+    </div>
+    <div id="refund-list" class="fade-up"><div class="empty">Loading…</div></div>
+  </div>
+
+  <!-- Wallets (admin) -->
+  <div class="page" id="page-wallets">
+    <div class="page-header fade-up">
+      <div>
+        <div class="greeting">Wallet <em>Management</em></div>
+        <div class="subhead">Admin · VW_WALLET_SUMMARY · wallet_ops.set_wallet_status</div>
+      </div>
+    </div>
+    <div class="wallet-grid fade-up" id="wallet-grid">
+      <div class="empty" style="grid-column:1/-1">Loading…</div>
+    </div>
+  </div>
+
+  <!-- Audit -->
+  <div class="page" id="page-audit">
+    <div class="page-header fade-up">
+      <div>
+        <div class="greeting"><em>Audit</em> Logs</div>
+        <div class="subhead">VW_AUDIT_DETAIL · trg_audit_immutable prevents any modification</div>
+      </div>
+    </div>
+    <div class="card fade-up">
+      <div class="card-title">Audit Trail</div>
+      <div class="card-sub">Every state change is logged. UPDATE and DELETE on AUDIT_LOG are blocked at database level.</div>
+      <div id="audit-list"><div class="empty">Loading…</div></div>
+    </div>
+  </div>
+
+</main>
+
+<!-- Transaction Modal -->
+<div class="overlay" id="modal" onclick="maybeClose(event)">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-title">New Transaction</div>
+    <div class="modal-sub">Routed through wallet_ops.do_transaction — Oracle enforces all rules</div>
+
+    <div class="form-group">
+      <label class="form-label">Type</label>
+      <div class="type-grid">
+        <div class="type-btn sel" onclick="setType(this,'CREDIT')">  <span class="icon">💚</span>Credit</div>
+        <div class="type-btn"     onclick="setType(this,'DEBIT')">   <span class="icon">💸</span>Debit</div>
+        <div class="type-btn"     onclick="setType(this,'TRANSFER')"><span class="icon">🔀</span>Transfer</div>
+        <div class="type-btn"     onclick="setType(this,'REFUND')">  <span class="icon">↩</span>Refund</div>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Amount (INR)</label>
+      <div class="inr-wrap">
+        <span class="inr-prefix">₹</span>
+        <input class="form-input" type="number" id="m-amount" placeholder="0.00" min="1" step="0.01"/>
+      </div>
+    </div>
+
+    <div class="form-group" id="recipient-row" style="display:none">
+      <label class="form-label">Recipient Wallet ID</label>
+      <input class="form-input" type="text" id="m-recipient" placeholder="e.g. 2"/>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Description</label>
+      <input class="form-input" type="text" id="m-desc" placeholder="What's this for?"/>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn-submit" id="submit-btn" onclick="submitTxn()">Execute</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const API        = "http://localhost:3000/api";
+const WALLET_ID  = 1;     // Kunjal Syal's wallet (seq starts at 1)
+const USER_ID    = 1001;  // Kunjal Syal
+const ADMIN_ID   = 1004;  // Diksha Arora
+
+let allTxns    = [];
+let txnFilter  = "all";
+let txnType    = "CREDIT";
+
+
+// ---- API helpers --------------------------------------------------------
+
+async function get(path) {
+  const res = await fetch(API + path);
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
+async function post(path, body) {
+  const res = await fetch(API + path, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body)
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
+
+// ---- Navigation ---------------------------------------------------------
+
+function nav(page, el) {
+  document.querySelectorAll(".page").forEach(p => p.classList.remove("active"));
+  document.querySelectorAll(".nav-item").forEach(n => n.classList.remove("active"));
+  document.getElementById("page-" + page).classList.add("active");
+  el.classList.add("active");
+
+  if (page === "transactions") loadTransactions();
+  if (page === "refunds")      loadRefunds();
+  if (page === "wallets")      loadWallets();
+  if (page === "audit")        loadAudit();
+}
+
+
+// ---- Helpers ------------------------------------------------------------
+
+function fmt(n) {
+  return Number(n).toLocaleString("en-IN");
+}
+
+function badge(s) {
+  const map = {
+    SUCCESS:  "badge-success",
+    FAILED:   "badge-failed",
+    PENDING:  "badge-pending",
+    REVERSED: "badge-reversed",
+    ROLLED_BACK: "badge-failed"
+  };
+  return `<span class="badge ${map[s] || "badge-pending"}">${s}</span>`;
+}
+
+const typeIcon  = { CREDIT:"💚", DEBIT:"💸", REFUND:"↩", TRANSFER:"🔀" };
+const typeClass = { CREDIT:"credit", DEBIT:"debit", REFUND:"refund", TRANSFER:"transfer" };
+
+function txnRow(t, showRef) {
+  const type = t.TXN_TYPE || t.type;
+  const amt  = Number(t.AMOUNT || t.amount);
+  const desc = t.DESCRIPTION || t.desc || "—";
+  const id   = t.TXN_ID || t.id;
+  const ref  = t.REFERENCE_NO || "—";
+  const date = t.CREATED_AT || "—";
+  const stat = t.STATUS || t.status;
+  const pos  = type === "CREDIT" || type === "REFUND";
+
+  return `<tr class="trow">
+    <td>
+      <div style="display:flex;align-items:center">
+        <div class="txn-icon ${typeClass[type]}">${typeIcon[type] || "?"}</div>
+        <div>
+          <div class="txn-name">${desc}</div>
+          <div class="txn-meta">${type} · #${id}</div>
+        </div>
+      </div>
+    </td>
+    ${showRef ? `<td style="font-size:11px;color:var(--text-light)">${ref}</td>` : ""}
+    <td style="font-size:13px;color:var(--text-mid)">${date}</td>
+    <td class="txn-amt ${pos ? "pos" : "neg"}">${pos ? "+" : "−"}₹${fmt(amt)}</td>
+    <td>${badge(stat)}</td>
+  </tr>`;
+}
+
+function limitBar(label, spent, limit, barClass) {
+  const pct = limit > 0 ? Math.min(100, (spent / limit) * 100).toFixed(1) : 0;
+  return `<div class="limit-row">
+    <div class="limit-header">
+      <span class="limit-name">${label}</span>
+      <div class="limit-right">
+        <div class="limit-vals">₹${fmt(spent)} of ₹${fmt(limit)}</div>
+        <div class="limit-pct">${pct}% used</div>
+      </div>
+    </div>
+    <div class="bar-track"><div class="bar-fill ${barClass}" style="width:${pct}%"></div></div>
+  </div>`;
+}
+
+function auditColor(action) {
+  const map = {
+    TXN_CREDIT:       "#059669",
+    TXN_DEBIT:        "#D4607A",
+    TXN_TRANSFER:     "#F07040",
+    TXN_REFUND:       "#D97706",
+    REFUND_APPROVED:  "#7A5A3A",
+    REFUND_REJECTED:  "#D4607A",
+    WALLET_FREEZE:    "#D97706",
+    WALLET_UNFREEZE:  "#059669",
+    AUTO_FREEZE:      "#D97706"
+  };
+  return map[action] || "#B08060";
+}
+
+
+// ---- DB health ----------------------------------------------------------
+
+async function checkHealth() {
+  const pill = document.getElementById("db-pill");
+  const text = document.getElementById("db-text");
+  try {
+    await get("/health");
+    pill.className = "db-pill";
+    text.textContent = "Oracle · Connected";
+  } catch {
+    pill.className = "db-pill offline";
+    text.textContent = "Oracle · Offline";
+  }
+}
+
+
+// ---- Dashboard ----------------------------------------------------------
+
+async function loadDashboard() {
+  try {
+    const [wallet, spent, refunds] = await Promise.all([
+      get(`/wallet/${USER_ID}`),
+      get(`/wallet/${WALLET_ID}/spent`),
+      get("/refunds")
+    ]);
+
+    // balance card
+    document.getElementById("balance-display").textContent = "₹ " + fmt(wallet.BALANCE);
+    document.getElementById("balance-sub").textContent =
+      "Wallet #" + wallet.WALLET_ID + " · " + wallet.CURRENCY;
+    document.getElementById("greet").textContent = wallet.FULL_NAME.split(" ")[0];
+    document.getElementById("sidebar-name").textContent = wallet.FULL_NAME;
+
+    const chip = document.getElementById("status-chip");
+    chip.innerHTML = wallet.STATUS === "ACTIVE"
+      ? '<span class="status-dot"></span> Active'
+      : "🔒 " + wallet.STATUS;
+
+    // stat cards
+    const daily   = Number(spent.DAILY_SPENT || 0);
+    const monthly = Number(spent.MONTHLY_SPENT || 0);
+    const dLimit  = Number(wallet.DAILY_LIMIT   || 10000);
+    const mLimit  = Number(wallet.MONTHLY_LIMIT || 100000);
+    const pLimit  = Number(wallet.PER_TXN_LIMIT || 5000);
+
+    document.getElementById("stat-daily").textContent   = "₹ " + fmt(daily);
+    document.getElementById("stat-daily-sub").textContent = "Limit: ₹" + fmt(dLimit) + " / day";
+    document.getElementById("stat-monthly").textContent  = "₹ " + fmt(monthly);
+    document.getElementById("stat-monthly-sub").textContent = "Limit: ₹" + fmt(mLimit) + " / month";
+
+    const pending = refunds.filter(r => r.APPROVAL_STATUS === "PENDING").length;
+    document.getElementById("stat-refunds").textContent = pending;
+
+    // spending limit bars
+    document.getElementById("limits-body").innerHTML =
+      limitBar("Daily Limit",          daily,   dLimit, "bar-peach") +
+      limitBar("Monthly Limit",        monthly, mLimit, "bar-rose")  +
+      limitBar("Per-Transaction Cap",  pLimit,  pLimit, "bar-amber");
+
+    // recent 5 transactions
+    const txns = await get(`/transactions/${WALLET_ID}`);
+    allTxns = txns;
+    const tbody = document.getElementById("dash-txns");
+    tbody.innerHTML = txns.length
+      ? txns.slice(0, 5).map(t => txnRow(t, false)).join("")
+      : '<tr><td colspan="4" class="empty">No transactions yet</td></tr>';
+
+  } catch (err) {
+    toast("Could not load wallet data. Is the server running?", "err");
+  }
+}
+
+
+// ---- Transactions page --------------------------------------------------
+
+async function loadTransactions() {
+  try {
+    allTxns = await get(`/transactions/${WALLET_ID}`);
+    renderTxns();
+  } catch (err) {
+    document.getElementById("all-txns").innerHTML =
+      `<tr><td colspan="5" class="empty">${err.message}</td></tr>`;
+  }
+}
+
+function renderTxns() {
+  const data = txnFilter === "all"
+    ? allTxns
+    : allTxns.filter(t => (t.TXN_TYPE || t.type) === txnFilter);
+
+  document.getElementById("all-txns").innerHTML = data.length
+    ? data.map(t => txnRow(t, true)).join("")
+    : `<tr><td colspan="5" class="empty">No ${txnFilter === "all" ? "" : txnFilter + " "}transactions</td></tr>`;
+}
+
+function filterTxn(f, el) {
+  txnFilter = f;
+  document.querySelectorAll("#txn-chips .chip").forEach(c => c.classList.remove("active"));
+  el.classList.add("active");
+  renderTxns();
+}
+
+
+// ---- Refunds page -------------------------------------------------------
+
+async function loadRefunds() {
+  try {
+    const refunds = await get("/refunds");
+    document.getElementById("refund-list").innerHTML = refunds.length
+      ? refunds.map(r => `
+        <div class="refund-card">
+          <div style="flex:1">
+            <div style="font-size:14px;font-weight:500;margin-bottom:4px">
+              Refund #${r.REFUND_ID} · ₹${fmt(r.AMOUNT)}
+            </div>
+            <div style="font-size:12px;color:var(--text-mid)">${r.REASON}</div>
+            <div style="font-size:11px;color:var(--text-light);margin-top:4px">
+              By ${r.REQUESTED_BY_NAME} · ${r.REQUESTED_AT} · TXN #${r.TXN_ID}
+            </div>
+          </div>
+          <div class="refund-actions">
+            ${badge(r.APPROVAL_STATUS)}
+            ${r.APPROVAL_STATUS === "PENDING" ? `
+              <button class="btn-sm btn-ok" onclick="processRefund(${r.REFUND_ID},'APPROVED')">Approve</button>
+              <button class="btn-sm btn-no" onclick="processRefund(${r.REFUND_ID},'REJECTED')">Reject</button>
+            ` : ""}
+          </div>
+        </div>`).join("")
+      : '<div class="empty">No refund requests</div>';
+  } catch (err) {
+    document.getElementById("refund-list").innerHTML = `<div class="empty">${err.message}</div>`;
+  }
+}
+
+async function processRefund(refundId, decision) {
+  try {
+    const res = await post("/refund/process", { refundId, adminId: ADMIN_ID, decision });
+    toast(res.message, decision === "APPROVED" ? "ok" : "err");
+    loadRefunds();
+    loadDashboard();
+  } catch (err) {
+    toast(err.message, "err");
+  }
+}
+
+
+// ---- Wallets (admin) ----------------------------------------------------
+
+async function loadWallets() {
+  try {
+    const wallets = await get("/wallets");
+    document.getElementById("wallet-grid").innerHTML = wallets.map(w => `
+      <div class="wallet-card">
+        <div style="display:flex;justify-content:space-between;margin-bottom:16px">
+          <div>
+            <div style="font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-light);margin-bottom:4px">
+              Wallet #${w.WALLET_ID}
+            </div>
+            <div style="font-size:17px;font-weight:600;font-family:'Fraunces',serif">${w.FULL_NAME}</div>
+            <div style="font-size:12px;color:var(--text-mid)">${w.EMAIL}</div>
+          </div>
+          ${badge(w.STATUS)}
+        </div>
+        <div style="font-family:'Fraunces',serif;font-size:30px;font-weight:300;margin-bottom:4px">
+          ₹${fmt(w.BALANCE)}
+        </div>
+        <div style="font-size:12px;color:var(--text-light);margin-bottom:16px">
+          ${w.CURRENCY} · Daily ₹${fmt(w.DAILY_LIMIT)} · Monthly ₹${fmt(w.MONTHLY_LIMIT)}
+        </div>
+        <div style="display:flex;gap:8px">
+          ${w.STATUS === "ACTIVE"
+            ? `<button class="btn-sm btn-no" onclick="setWallet(${w.WALLET_ID},'FREEZE')">Freeze</button>`
+            : `<button class="btn-sm btn-ok" onclick="setWallet(${w.WALLET_ID},'UNFREEZE')">Unfreeze</button>`}
+        </div>
+      </div>`).join("");
+  } catch (err) {
+    document.getElementById("wallet-grid").innerHTML =
+      `<div class="empty" style="grid-column:1/-1">${err.message}</div>`;
+  }
+}
+
+async function setWallet(walletId, action) {
+  try {
+    const res = await post("/wallet/status", { walletId, adminId: ADMIN_ID, action });
+    toast(res.message, action === "FREEZE" ? "err" : "ok");
+    loadWallets();
+  } catch (err) {
+    toast(err.message, "err");
+  }
+}
+
+
+// ---- Audit log ----------------------------------------------------------
+
+async function loadAudit() {
+  try {
+    const logs = await get("/audit");
+    document.getElementById("audit-list").innerHTML = logs.length
+      ? logs.map(a => `
+        <div class="audit-row">
+          <div class="audit-dot" style="background:${auditColor(a.ACTION_TYPE)}"></div>
+          <div style="flex:1">
+            <div class="audit-action">
+              ${a.ACTION_TYPE}
+              <span style="font-size:11px;font-weight:400;color:var(--text-light)"> on ${a.TABLE_NAME}</span>
+            </div>
+            <div class="audit-detail">By ${a.PERFORMED_BY_NAME} · ${a.OLD_VALUE || "—"} → ${a.NEW_VALUE || "—"}</div>
+            <div class="audit-time">${a.CREATED_AT} · #${a.AUDIT_ID}</div>
+          </div>
+          <div class="immutable-tag">immutable</div>
+        </div>`).join("")
+      : '<div class="empty">No audit records</div>';
+  } catch (err) {
+    document.getElementById("audit-list").innerHTML = `<div class="empty">${err.message}</div>`;
+  }
+}
+
+
+// ---- Modal --------------------------------------------------------------
+
+function openModal()  { document.getElementById("modal").classList.add("open"); }
+function closeModal() { document.getElementById("modal").classList.remove("open"); }
+function maybeClose(e) { if (e.target.id === "modal") closeModal(); }
+
+function setType(el, type) {
+  document.querySelectorAll(".type-btn").forEach(b => b.classList.remove("sel"));
+  el.classList.add("sel");
+  txnType = type;
+  document.getElementById("recipient-row").style.display =
+    type === "TRANSFER" ? "block" : "none";
+}
+
+async function submitTxn() {
+  const amount = parseFloat(document.getElementById("m-amount").value);
+  const desc   = document.getElementById("m-desc").value.trim();
+  const recip  = document.getElementById("m-recipient").value.trim();
+  const btn    = document.getElementById("submit-btn");
+
+  if (!amount || amount <= 0) { toast("Enter a valid amount", "err"); return; }
+  if (!desc) { toast("Description is required", "err"); return; }
+
+  btn.disabled = true;
+  btn.textContent = "Sending…";
+
+  try {
+    const res = await post("/transaction", {
+      walletId:    WALLET_ID,
+      txnType,
+      amount,
+      description: desc,
+      initiatedBy: USER_ID,
+      recipientId: recip || null
+    });
+
+    if (res.status === "SUCCESS") {
+      toast(res.message, "ok");
+      closeModal();
+      loadDashboard();
+    } else {
+      toast(res.message, "err");
+    }
+  } catch (err) {
+    toast(err.message, "err");
+  }
+
+  btn.disabled = false;
+  btn.textContent = "Execute";
+  document.getElementById("m-amount").value = "";
+  document.getElementById("m-desc").value   = "";
+}
+
+
+// ---- Toast --------------------------------------------------------------
+
+function toast(msg, type = "ok") {
+  const el = document.getElementById("toast");
+  el.textContent = msg;
+  el.className = "toast " + type;
+  el.classList.add("show");
+  setTimeout(() => el.classList.remove("show"), 4000);
+}
+
+
+// ---- Init ---------------------------------------------------------------
+
+(async () => {
+  await checkHealth();
+  await loadDashboard();
+})();
+</script>
+</body>
+</html>
