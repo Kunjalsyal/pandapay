@@ -285,6 +285,23 @@
 </style>
 </head>
 <body>
+<div id="login-screen" style="position:fixed;inset:0;background:#FEFAF6;z-index:1000;display:flex;align-items:center;justify-content:center">
+  <div style="width:400px;max-width:90vw;background:#fff;border:1px solid #FFE5D6;border-radius:28px;padding:40px;box-shadow:0 20px 60px rgba(45,31,15,.08)">
+    <div style="font-family:'Fraunces',serif;font-size:32px;color:#D4522A;margin-bottom:6px">🐼 PandaPay</div>
+    <div style="font-size:13px;color:#7A5A3A;margin-bottom:28px">Sign in to your managed wallet</div>
+    <div class="form-group">
+      <label class="form-label">Email</label>
+      <input class="form-input" id="login-email" value="kunjal@tietu.ac.in" />
+    </div>
+    <div class="form-group">
+      <label class="form-label">Password</label>
+      <input class="form-input" id="login-password" type="password" value="PandaPay@123" />
+    </div>
+    <button class="btn-submit" style="width:100%;flex:none" onclick="login()">Sign in</button>
+    <div id="login-error" style="font-size:12px;color:#D4607A;margin-top:12px"></div>
+    <div style="font-size:11px;color:#B08060;margin-top:18px">Demo USER: kunjal@tietu.ac.in · PandaPay@123</div>
+  </div>
+</div>
 
 <aside class="sidebar">
   <div class="logo">
@@ -307,6 +324,9 @@
     <span id="db-text">Connecting…</span>
   </div>
 
+  <div style="padding:0 16px 10px">
+    <button class="btn-sm" style="width:100%;background:transparent;border:1px solid var(--peach-200);color:var(--text-mid)" onclick="logout()">Sign out</button>
+  </div>
   <div class="user-card">
     <div class="avatar">KS</div>
     <div>
@@ -458,10 +478,9 @@
     <div class="form-group">
       <label class="form-label">Type</label>
       <div class="type-grid">
-        <div class="type-btn sel" onclick="setType(this,'CREDIT')">  <span class="icon">💚</span>Credit</div>
-        <div class="type-btn"     onclick="setType(this,'DEBIT')">   <span class="icon">💸</span>Debit</div>
-        <div class="type-btn"     onclick="setType(this,'TRANSFER')"><span class="icon">🔀</span>Transfer</div>
-        <div class="type-btn"     onclick="setType(this,'REFUND')">  <span class="icon">↩</span>Refund</div>
+        <div class="type-btn" data-role="admin" onclick="setType(this,'CREDIT')"><span class="icon">💚</span>Credit</div>
+        <div class="type-btn sel" data-role="user" onclick="setType(this,'DEBIT')"><span class="icon">💸</span>Debit</div>
+        <div class="type-btn" data-role="user" onclick="setType(this,'TRANSFER')"><span class="icon">🔀</span>Transfer</div>
       </div>
     </div>
 
@@ -493,32 +512,94 @@
 <div class="toast" id="toast"></div>
 
 <script>
-const API        = "http://localhost:3000/api";
-const WALLET_ID  = 1;     // Kunjal Syal's wallet (seq starts at 1)
-const USER_ID    = 1001;  // Kunjal Syal
-const ADMIN_ID   = 1004;  // Diksha Arora
+const API = "/api";
+let SESSION = JSON.parse(localStorage.getItem("pandapay_session") || "null");
+let WALLET_ID = null;
+let USER_ID = null;
+let ROLE = null;
 
 let allTxns    = [];
 let txnFilter  = "all";
-let txnType    = "CREDIT";
+let txnType    = "DEBIT";
 
 
 // ---- API helpers --------------------------------------------------------
 
 async function get(path) {
-  const res = await fetch(API + path);
-  if (!res.ok) throw new Error(await res.text());
+  const res = await fetch(API + path, {
+    headers: SESSION?.token ? { Authorization: "Bearer " + SESSION.token } : {}
+  });
+  if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || res.statusText);
   return res.json();
 }
 
 async function post(path, body) {
   const res = await fetch(API + path, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      ...(SESSION?.token ? { Authorization: "Bearer " + SESSION.token } : {})
+    },
     body: JSON.stringify(body)
   });
-  if (!res.ok) throw new Error(await res.text());
+  if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || res.statusText);
   return res.json();
+}
+
+async function login() {
+  const email = document.getElementById("login-email").value.trim();
+  const password = document.getElementById("login-password").value;
+  try {
+    const res = await post("/login", { email, password });
+    SESSION = res;
+    USER_ID = res.user.userId;
+    ROLE = res.user.role;
+    localStorage.setItem("pandapay_session", JSON.stringify(res));
+    document.getElementById("login-screen").style.display = "none";
+    setupRoleUI();
+    await loadDashboard();
+  } catch (err) {
+    document.getElementById("login-error").textContent = err.message;
+  }
+}
+
+function logout() {
+  localStorage.removeItem("pandapay_session");
+  location.reload();
+}
+
+async function restoreSession() {
+  if (!SESSION?.token) return false;
+  try {
+    const me = await get("/me");
+    USER_ID = me.userId;
+    ROLE = me.role;
+    document.getElementById("login-screen").style.display = "none";
+    setupRoleUI();
+    return true;
+  } catch {
+    localStorage.removeItem("pandapay_session");
+    SESSION = null;
+    return false;
+  }
+}
+
+function setupRoleUI() {
+  document.querySelector(".user-role").textContent = ROLE;
+  document.querySelector(".avatar").textContent =
+    (SESSION?.user?.name || "P").split(" ").map(x => x[0]).join("").slice(0,2);
+  const adminSection = document.querySelectorAll(".nav-section")[1];
+  const walletNav = document.querySelector('[onclick="nav(\'wallets\', this)"]');
+  const auditNav = document.querySelector('[onclick="nav(\'audit\', this)"]');
+  if (ROLE === "USER") {
+    if (walletNav) walletNav.style.display = "none";
+    if (auditNav) auditNav.style.display = "none";
+  } else if (ROLE === "AUDITOR") {
+    if (walletNav) walletNav.style.display = "none";
+    document.querySelector('[onclick="nav(\'refunds\', this)"]').style.display = "none";
+    document.querySelector('[onclick="nav(\'transactions\', this)"]').style.display = "none";
+    document.querySelector(".btn").style.display = "none";
+  }
 }
 
 
@@ -641,6 +722,7 @@ async function loadDashboard() {
     ]);
 
     // balance card
+    WALLET_ID = wallet.WALLET_ID;
     document.getElementById("balance-display").textContent = "₹ " + fmt(wallet.BALANCE);
     document.getElementById("balance-sub").textContent =
       "Wallet #" + wallet.WALLET_ID + " · " + wallet.CURRENCY;
@@ -750,7 +832,7 @@ async function loadRefunds() {
 
 async function processRefund(refundId, decision) {
   try {
-    const res = await post("/refund/process", { refundId, adminId: ADMIN_ID, decision });
+    const res = await post("/refund/process", { refundId, decision });
     toast(res.message, decision === "APPROVED" ? "ok" : "err");
     loadRefunds();
     loadDashboard();
@@ -781,12 +863,13 @@ async function loadWallets() {
           ₹${fmt(w.BALANCE)}
         </div>
         <div style="font-size:12px;color:var(--text-light);margin-bottom:16px">
-          ${w.CURRENCY} · Daily ₹${fmt(w.DAILY_LIMIT)} · Monthly ₹${fmt(w.MONTHLY_LIMIT)}
+          ${w.CURRENCY} · Daily ₹${fmt(w.DAILY_LIMIT)} · Monthly ₹${fmt(w.MONTHLY_LIMIT)} · Per txn ₹${fmt(w.PER_TXN_LIMIT)}
         </div>
-        <div style="display:flex;gap:8px">
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
           ${w.STATUS === "ACTIVE"
             ? `<button class="btn-sm btn-no" onclick="setWallet(${w.WALLET_ID},'FREEZE')">Freeze</button>`
             : `<button class="btn-sm btn-ok" onclick="setWallet(${w.WALLET_ID},'UNFREEZE')">Unfreeze</button>`}
+          <button class="btn-sm" style="background:var(--peach-100);color:var(--peach-600)" onclick="editLimits(${w.WALLET_ID},${w.DAILY_LIMIT},${w.MONTHLY_LIMIT},${w.PER_TXN_LIMIT})">Set limits</button>
         </div>
       </div>`).join("");
   } catch (err) {
@@ -797,9 +880,27 @@ async function loadWallets() {
 
 async function setWallet(walletId, action) {
   try {
-    const res = await post("/wallet/status", { walletId, adminId: ADMIN_ID, action });
+    const res = await post("/wallet/status", { walletId, action });
     toast(res.message, action === "FREEZE" ? "err" : "ok");
     loadWallets();
+  } catch (err) {
+    toast(err.message, "err");
+  }
+}
+
+async function editLimits(walletId, daily, monthly, perTxn) {
+  const d = Number(prompt("Daily limit", daily));
+  const m = Number(prompt("Monthly limit", monthly));
+  const p = Number(prompt("Per-transaction limit", perTxn));
+  if (![d,m,p].every(Number.isFinite)) return;
+  try {
+    const res = await post("/wallet/status", {
+      walletId, action: "SET_LIMITS",
+      dailyLimit: d, monthlyLimit: m, perTxnLimit: p
+    });
+    toast(res.message, res.status === "SUCCESS" ? "ok" : "err");
+    loadWallets();
+    loadDashboard();
   } catch (err) {
     toast(err.message, "err");
   }
@@ -864,7 +965,6 @@ async function submitTxn() {
       txnType,
       amount,
       description: desc,
-      initiatedBy: USER_ID,
       recipientId: recip || null
     });
 
@@ -901,7 +1001,9 @@ function toast(msg, type = "ok") {
 
 (async () => {
   await checkHealth();
-  await loadDashboard();
+  if (await restoreSession()) {
+    await loadDashboard();
+  }
 })();
 </script>
 </body>
