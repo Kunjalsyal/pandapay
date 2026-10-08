@@ -132,25 +132,6 @@ app.post("/api/login", async (req, res) => {
   }
 });
 
-app.get("/api/me", auth, (req, res) => res.json(req.user));
-
-app.get("/api/wallet/:userId", auth, async (req, res) => {
-  const userId = Number(req.params.userId);
-  if (req.user.role === "USER" && req.user.userId !== userId) {
-    return res.status(403).json({ error: "You can only view your own wallet" });
-  }
-
-  try {
-    const result = await query(
-      "SELECT * FROM VW_WALLET_SUMMARY WHERE user_id = :userIdBind",
-      { userIdBind: userId }
-    );
-    if (!result.rows.length) return res.status(404).json({ error: "Wallet not found" });
-    res.json(result.rows[0]);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
 
 app.get("/api/wallet/:walletId/spent", auth, async (req, res) => {
   try {
@@ -354,9 +335,35 @@ app.get("/api/wallets", auth, allowRoles("ADMIN"), async (req, res) => {
 });
 
 app.post("/api/wallet/status", auth, allowRoles("ADMIN"), async (req, res) => {
-  const { walletId, action, reason } = req.body;
+  const { walletId, action, reason, dailyLimit, monthlyLimit, perTxnLimit } = req.body;
 
   try {
+    if (action === "SET_LIMITS") {
+      const result = await callPackage(
+        `BEGIN
+           wallet_ops.set_spending_limits(
+             p_wallet_id => :wallet_id,
+             p_admin_id => :admin_id,
+             p_daily_limit => :daily_limit,
+             p_monthly_limit => :monthly_limit,
+             p_per_txn_limit => :per_txn_limit,
+             p_status => :status,
+             p_message => :message
+           );
+         END;`,
+        {
+          wallet_id: Number(walletId),
+          admin_id: req.user.userId,
+          daily_limit: Number(dailyLimit),
+          monthly_limit: Number(monthlyLimit),
+          per_txn_limit: Number(perTxnLimit),
+          status: { dir: oracledb.BIND_OUT, type: oracledb.STRING, maxSize: 20 },
+          message: { dir: oracledb.BIND_OUT, type: oracledb.STRING, maxSize: 400 }
+        }
+      );
+      return res.json({ status: result.outBinds.status, message: result.outBinds.message });
+    }
+
     const result = await callPackage(
       `BEGIN
          wallet_ops.set_wallet_status(
@@ -383,37 +390,6 @@ app.post("/api/wallet/status", auth, allowRoles("ADMIN"), async (req, res) => {
   }
 });
 
-app.post("/api/wallet/limits", auth, allowRoles("ADMIN"), async (req, res) => {
-  const { walletId, dailyLimit, monthlyLimit, perTxnLimit } = req.body;
-
-  try {
-    const result = await callPackage(
-      `BEGIN
-         wallet_ops.set_spending_limits(
-           p_wallet_id => :wallet_id,
-           p_admin_id => :admin_id,
-           p_daily_limit => :daily_limit,
-           p_monthly_limit => :monthly_limit,
-           p_per_txn_limit => :per_txn_limit,
-           p_status => :status,
-           p_message => :message
-         );
-       END;`,
-      {
-        wallet_id: Number(walletId),
-        admin_id: req.user.userId,
-        daily_limit: Number(dailyLimit),
-        monthly_limit: Number(monthlyLimit),
-        per_txn_limit: Number(perTxnLimit),
-        status: { dir: oracledb.BIND_OUT, type: oracledb.STRING, maxSize: 20 },
-        message: { dir: oracledb.BIND_OUT, type: oracledb.STRING, maxSize: 400 }
-      }
-    );
-    res.json({ status: result.outBinds.status, message: result.outBinds.message });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
 
 app.get("/api/audit", auth, allowRoles("ADMIN", "AUDITOR"), async (req, res) => {
   try {
