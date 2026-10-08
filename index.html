@@ -658,7 +658,12 @@ function txnRow(t, showRef) {
     ${showRef ? `<td style="font-size:11px;color:var(--text-light)">${ref}</td>` : ""}
     <td style="font-size:13px;color:var(--text-mid)">${date}</td>
     <td class="txn-amt ${pos ? "pos" : "neg"}">${pos ? "+" : "−"}₹${fmt(amt)}</td>
-    <td>${badge(stat)}</td>
+    <td>
+      ${badge(stat)}
+      ${ROLE === "USER" && stat === "SUCCESS" && (type === "DEBIT" || type === "TRANSFER")
+        ? `<button class="btn-sm" style="margin-left:8px;background:var(--amber-100);color:var(--amber-500)" onclick="requestRefund(${id})">Refund</button>`
+        : ""}
+    </td>
   </tr>`;
 }
 
@@ -767,6 +772,19 @@ async function loadDashboard() {
 
 
 // ---- Transactions page --------------------------------------------------
+
+async function requestRefund(txnId) {
+  const reason = prompt("Why are you requesting a refund?");
+  if (!reason || !reason.trim()) return;
+  try {
+    const res = await post("/refund/request", { txnId, reason: reason.trim() });
+    toast(res.message, res.status === "SUCCESS" ? "ok" : "err");
+    loadTransactions();
+    loadRefunds();
+  } catch (err) {
+    toast(err.message, "err");
+  }
+}
 
 async function loadTransactions() {
   try {
