@@ -717,14 +717,17 @@ async function checkHealth() {
 
 async function loadDashboard() {
   try {
-    const [wallet, spent, refunds] = await Promise.all([
-      get(`/wallet/${USER_ID}`),
+    // Load the user's wallet first so WALLET_ID is always available
+    // before any transaction or spending-limit request is made.
+    const wallet = await get(`/wallet/${USER_ID}`);
+    WALLET_ID = wallet.WALLET_ID;
+
+    const [spent, refunds] = await Promise.all([
       get(`/wallet/${WALLET_ID}/spent`),
       get("/refunds")
     ]);
 
     // balance card
-    WALLET_ID = wallet.WALLET_ID;
     document.getElementById("balance-display").textContent = "₹ " + fmt(wallet.BALANCE);
     document.getElementById("balance-sub").textContent =
       "Wallet #" + wallet.WALLET_ID + " · " + wallet.CURRENCY;
