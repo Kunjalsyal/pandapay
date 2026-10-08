@@ -6,7 +6,7 @@
 
 ## What It Does
 
-PandaPay lets users hold a wallet balance, send money, top up, and withdraw — all within enforced daily and monthly spending limits. Admins can freeze wallets and process refunds. Every state-changing action is captured in an immutable audit log.
+PandaPay models an ADMIN-managed wallet system: an organization/parent account loads funds for USER wallets, sets spending limits, can freeze wallets, and approves refunds. USERS can spend or transfer money within enforced per-transaction, daily, and monthly limits. AUDITORS can review the immutable audit trail.
 
 ---
 
@@ -43,7 +43,7 @@ The real brains of PandaPay live inside Oracle. The Node.js server is intentiona
 |---|---|
 | `ROLES` | Three roles: `USER`, `ADMIN`, `AUDITOR` |
 | `USERS` | Registered users with role, status, and hashed password |
-| `WALLET` | One wallet per user — balance, status (`ACTIVE`/`FROZEN`), timestamps |
+| `WALLET` | One wallet per user — assigned admin, balance, status (`ACTIVE`/`FROZEN`), timestamps |
 | `SPENDING_LIMIT` | Per-wallet daily and monthly caps |
 | `TRANSACTION_HISTORY` | Every transaction with type, amount, status, and reference |
 | `REFUND_REQUEST` | Refund submissions pending admin review |
@@ -67,10 +67,13 @@ wallet_ops.daily_spent(...)        -- live daily spend total for a wallet
 wallet_ops.monthly_spent(...)      -- live monthly spend total for a wallet
 ```
 
-Validation enforced inside Oracle (not the app layer):
+Validation enforced inside Oracle (not only the app layer):
+- Only an ADMIN assigned to a wallet can load money, change limits, freeze/unfreeze, or approve its refunds
+- A USER can spend/transfer only from their own managed wallet
 - Balance cannot go below zero (`CHECK` constraint + `trg_balance_guard` trigger)
-- Spending limits checked before every debit
-- Three consecutive failures auto-freeze the wallet (`trg_auto_freeze`)
+- Spending limits are checked before every debit/transfer
+- Failed attempts are recorded without changing the balance; three consecutive failures auto-freeze the wallet
+- Transfer wallets are locked in deterministic order to reduce deadlock risk
 - Transaction status transitions follow a strict state machine (`trg_txn_state_machine`)
 - Audit log rows are immutable — no `UPDATE` or `DELETE` allowed (`trg_audit_immutable`)
 
@@ -82,10 +85,11 @@ Validation enforced inside Oracle (not the app layer):
 
 | Method | Endpoint | Description |
 |---|---|---|
+| `POST` | `/api/login` | Authenticate a user and return a signed session token |
 | `GET` | `/api/wallet/:userId` | Wallet summary — balance, limits, status |
 | `GET` | `/api/wallet/:walletId/spent` | Live daily and monthly spend totals |
 | `GET` | `/api/wallets` | All wallets (admin) |
-| `POST` | `/api/wallet/status` | Freeze or unfreeze a wallet |
+| `POST` | `/api/wallet/status` | Freeze/unfreeze a wallet or update its spending limits |
 
 ### Transactions
 
@@ -102,12 +106,13 @@ Validation enforced inside Oracle (not the app layer):
 | `POST` | `/api/refund/process` | Admin approves or rejects a refund |
 | `GET` | `/api/refunds` | All refund requests |
 
-### Misc
+### Audit
 
 | Method | Endpoint | Description |
 |---|---|---|
 | `GET` | `/api/audit` | Last 100 audit log entries |
-| `GET` | `/api/health` | DB connectivity check |
+
+> The deployment health check remains available at `/api/health`; it is operational infrastructure and is not counted in the 11 application REST APIs listed above.
 
 ---
 
@@ -133,7 +138,7 @@ npm start
 # → http://localhost:3000
 ```
 
-> The Oracle connection is pre-configured to connect as `system / 12345` on `localhost:1521/XEPDB1`. Update the `db` object in `server.js` if your credentials differ.
+> Configure `DB_USER`, `DB_PASSWORD`, `DB_CONNECT_STRING`, and `APP_SECRET` as environment variables. Do not commit database credentials or the application secret.
 
 ---
 
