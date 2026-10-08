@@ -844,6 +844,7 @@ async function processRefund(refundId, decision) {
 async function loadWallets() {
   try {
     const wallets = await get("/wallets");
+    if (wallets.length && !WALLET_ID) WALLET_ID = wallets[0].WALLET_ID;
     document.getElementById("wallet-grid").innerHTML = wallets.map(w => `
       <div class="wallet-card">
         <div style="display:flex;justify-content:space-between;margin-bottom:16px">
@@ -932,7 +933,18 @@ async function loadAudit() {
 
 // ---- Modal --------------------------------------------------------------
 
-function openModal()  { document.getElementById("modal").classList.add("open"); }
+function openModal() {
+  if (ROLE === "ADMIN") {
+    txnType = "CREDIT";
+    document.querySelectorAll(".type-btn").forEach(b => b.classList.remove("sel"));
+    document.querySelector('.type-btn[data-role="admin"]').classList.add("sel");
+  } else {
+    txnType = "DEBIT";
+    document.querySelectorAll(".type-btn").forEach(b => b.classList.remove("sel"));
+    document.querySelector('.type-btn[data-role="user"]').classList.add("sel");
+  }
+  document.getElementById("modal").classList.add("open");
+}
 function closeModal() { document.getElementById("modal").classList.remove("open"); }
 function maybeClose(e) { if (e.target.id === "modal") closeModal(); }
 
