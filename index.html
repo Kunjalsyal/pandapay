@@ -983,6 +983,17 @@ async function submitTxn() {
   if (!amount || amount <= 0) { toast("Enter a valid amount", "err"); return; }
   if (!desc) { toast("Description is required", "err"); return; }
 
+  // Recover the wallet id if the modal was opened before the dashboard finished loading.
+  if (!WALLET_ID) {
+    try {
+      const wallet = await get(`/wallet/${USER_ID}`);
+      WALLET_ID = wallet.WALLET_ID;
+    } catch (err) {
+      toast("Could not find your wallet. Please refresh and try again.", "err");
+      return;
+    }
+  }
+
   btn.disabled = true;
   btn.textContent = "Sending…";
 
