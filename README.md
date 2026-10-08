@@ -1,4 +1,4 @@
-# 🐼 PandaPay — Digital Wallet System
+#  Digital Wallet System
 
 > A full-stack digital wallet application built with **Node.js + Express** on the backend and **Oracle Database XE** doing the heavy lifting where it matters — business logic, integrity, and audit trails.
 
