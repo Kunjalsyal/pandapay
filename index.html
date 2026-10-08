@@ -557,7 +557,9 @@ async function login() {
     localStorage.setItem("pandapay_session", JSON.stringify(res));
     document.getElementById("login-screen").style.display = "none";
     setupRoleUI();
-    await loadDashboard();
+    if (ROLE === "ADMIN") await loadWallets();
+    else if (ROLE === "AUDITOR") await loadAudit();
+    else await loadDashboard();
   } catch (err) {
     document.getElementById("login-error").textContent = err.message;
   }
@@ -574,6 +576,8 @@ async function restoreSession() {
   ROLE = SESSION.user.role;
   document.getElementById("login-screen").style.display = "none";
   setupRoleUI();
+  if (ROLE === "ADMIN") await loadWallets();
+  else if (ROLE === "AUDITOR") await loadAudit();
   return true;
 }
 
