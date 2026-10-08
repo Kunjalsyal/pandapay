@@ -569,19 +569,12 @@ function logout() {
 }
 
 async function restoreSession() {
-  if (!SESSION?.token) return false;
-  try {
-    const me = await get("/me");
-    USER_ID = me.userId;
-    ROLE = me.role;
-    document.getElementById("login-screen").style.display = "none";
-    setupRoleUI();
-    return true;
-  } catch {
-    localStorage.removeItem("pandapay_session");
-    SESSION = null;
-    return false;
-  }
+  if (!SESSION?.token || !SESSION.user) return false;
+  USER_ID = SESSION.user.userId;
+  ROLE = SESSION.user.role;
+  document.getElementById("login-screen").style.display = "none";
+  setupRoleUI();
+  return true;
 }
 
 function setupRoleUI() {
