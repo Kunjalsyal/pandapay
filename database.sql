@@ -586,7 +586,7 @@ CREATE OR REPLACE PACKAGE BODY wallet_ops AS
     v_new_bal := CASE
       WHEN v_type = 'CREDIT' THEN v_wallet.balance + p_amount
       ELSE v_wallet.balance - p_amount
-    END CASE;
+    END;
 
     v_txn_id := SEQ_TXN.NEXTVAL;
     v_ref := new_reference || LPAD(v_txn_id, 8, '0');
